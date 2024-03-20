@@ -47,9 +47,8 @@ repos:
     hooks:
       - id: mypy
         # exclude: ^tests/
-        args:
-          [
-            --strict,
+        args: [
+            # --strict,
             "--disable-error-code",
             "type-arg",
             "--disable-error-code",

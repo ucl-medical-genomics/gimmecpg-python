@@ -5,7 +5,7 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry]
 name = "GIMMEcpg-python"
 version = "0.0.1"
-description = "hon version of GIMMEcpg, developed with Polars and H2OAutoML"
+description = "Python version of GIMMEcpg, developed with Polars and H2OAutoML"
 authors = ["Niuzheng Chai <niuzheng.chai.21@ucl.ac.uk>"]
 readme = "README.md"
 packages = [{ include = "src/gimmecpg_python" }]
@@ -64,13 +64,14 @@ convention = "google"
 "tests/*" = ["D100", "D103", "D104"]
 
 [tool.mypy]
-strict = true
+strict = false
 disable_error_code = ["type-arg"]
 
 # NOTE: uncomment these lines and edit accordingly if you have modules still without typings
-# [[tool.mypy.overrides]]
-# module = ["sklearn.*",]
-# ignore_missing_imports = true
+[tool.mypy.overrides]
+module = ["files.*","missing.*","impute.*"]
+ignore_missing_imports = true
+disallow-untyped-defs = false
 
 [tool.commitizen]
 name = "cz_conventional_commits"

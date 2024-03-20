@@ -1,0 +1,21 @@
+{
+  "template": "https://github.com/alanwilter/poetry-python-cookiecutter",
+  "commit": "be04eeb6610adb1e31fc2e577c4e730d934cf5b2",
+  "checkout": null,
+  "context": {
+    "cookiecutter": {
+      "author_name": "Niuzheng Chai",
+      "author_email": "niuzheng.chai.21@ucl.ac.uk",
+      "github_username": "niuums",
+      "project_name": "GIMMEcpg-python",
+      "project_slug": "gimmecpg_python",
+      "dist_name": "gimmecpg-python",
+      "project_description": "Python version of GIMMEcpg, developed with Polars and H2OAutoML",
+      "python_version": "3.12",
+      "version": "0.0.1",
+      "license": "MIT",
+      "_template": "https://github.com/alanwilter/poetry-python-cookiecutter"
+    }
+  },
+  "directory": null
+}

@@ -10,37 +10,33 @@
 
 ## About The Project
 
-hon version of GIMMEcpg, developed with Polars and H2OAutoML
+Python version of GIMMEcpg, developed with Polars and H2OAutoML
 
 ## Getting Started
 
-To run this project locally, you will need to install the prerequisites and follow the installation section.
+usage: main.py [-h] -i INPUT -o OUTPUT -r REF [-c MINCOV] [-d MAXDISTANCE]
+[-k] [-a] [-t RUNTIME] [-m MAXMODELS] [-s]
+
+Options for imputing missing CpG sites based on neighbouring sites:
+
+-h, --help show this help message and exit
+-i, --input Path to directory of bed files (make sure it contains only
+the bed files to be analysed)
+-o, --output Path to output directory
+-r, --ref Path to reference methylation file
+-c, --minCov Minimum coverage to consider methylation site as present.
+Default = 10
+-d, --maxDistance Maximum distance between missing site and each neighbour
+for the site to be imputed. Default = all sites considered
+-k, --collapse Choose whether to merge methylation sites on opposite strands
+together. Default = False
+-a, --accurate Choose between Accurate and Fast mode. Default = Fast
+-t, --runTime Time (seconds) to train model. Default = 3600s (2h)
+-m, --maxModels Maximum number of models to train within the time specified under
+--runTime. Excludes Stacked Ensemble models
+-s, --streaming Choose if streaming is required (for files that exceed memory).
+Default = False
 
 ### Prerequisites
 
-This Project depends on the [`poetry`](https://python-poetry.org/).
-
-1. Install poetry, via `homebrew` or [`pipx`](https://github.com/pypa/pipx):
-
-   ```bash
-   brew install poetry
-   ```
-
-   or
-
-   ```bash
-   pipx install poetry
-   ```
-
-2. Don't forget to use the python environment you set before and, if using `VScode`, apply it there.
-
-3. It's optional, but we strongly recommend [`commitizen`](https://github.com/commitizen-tools/commitizen), which follows [Conventional Commits](https://www.conventionalcommits.org/)
-
 ### Installation
-
-1. Clone the repo
-
-   ```sh
-   git clone https://github.com/niuums/gimmecpg-python
-   cd gimmecpg-python
-   ```
