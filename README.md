@@ -20,23 +20,17 @@ usage: main.py [-h] -i INPUT -o OUTPUT -r REF [-c MINCOV] [-d MAXDISTANCE]
 
 Options for imputing missing CpG sites based on neighbouring sites:
 
--h, --help show this help message and exit
--i, --input Path to directory of bed files (make sure it contains only
-the bed files to be analysed)
--o, --output Path to output directory
--r, --ref Path to reference methylation file
--c, --minCov Minimum coverage to consider methylation site as present.
-Default = 10
--d, --maxDistance Maximum distance between missing site and each neighbour
-for the site to be imputed. Default = all sites considered
--k, --collapse Choose whether to merge methylation sites on opposite strands
-together. Default = False
--a, --accurate Choose between Accurate and Fast mode. Default = Fast
--t, --runTime Time (seconds) to train model. Default = 3600s (2h)
--m, --maxModels Maximum number of models to train within the time specified under
---runTime. Excludes Stacked Ensemble models
--s, --streaming Choose if streaming is required (for files that exceed memory).
-Default = False
+-h, --help           show this help message and exit
+-i, --input          Path to directory of bed files (make sure it contains only the bed files to be analysed)
+-o, --output         Path to output directory
+-r, --ref            Path to reference methylation file
+-c, --minCov         Minimum coverage to consider methylation site as present. Default = 10
+-d, --maxDistance    Maximum distance between missing site and each neighbour for the site to be imputed. Default = all sites considered
+-k, --collapse       Choose whether to merge methylation sites on opposite strands together. Default = False
+-a, --accurate       Choose between Accurate and Fast mode. Default = Fast
+-t, --runTime        Time (seconds) to train model. Default = 3600s (2h)
+-m, --maxModels      Maximum number of models to train within the time specified under --runTime. Excludes Stacked Ensemble models
+-s, --streaming      Choose if streaming is required (for files that exceed memory). Default = False
 ```
 
 ### Prerequisites
