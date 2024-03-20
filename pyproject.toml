@@ -1,0 +1,82 @@
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "GIMMEcpg-python"
+version = "0.0.1"
+description = "hon version of GIMMEcpg, developed with Polars and H2OAutoML"
+authors = ["Niuzheng Chai <niuzheng.chai.21@ucl.ac.uk>"]
+readme = "README.md"
+packages = [{ include = "src/gimmecpg_python" }]
+license = "MIT"
+repository = "https://github.com/niuums/gimmecpg_python"
+classifiers = ["Programming Language :: Python :: 3 :: Only"]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+
+[tool.poetry.scripts]
+gimmecpg_python = "gimmecpg_python.main:main"
+
+[tool.poetry.group.dev.dependencies]
+boto3-stubs = { extras = ["lambda", "s3"], version = "*" }
+ipdb = "*"
+ipython = "*"
+jupyterlab = "*"
+mypy = "*"
+mypy-boto3-lambda = "*"
+mypy-boto3-s3 = "*"
+pandas-stubs = "*"
+pdbpp = "*"
+pip = "*"
+pre-commit = "*"
+pytest-cov = "*"
+pytest-env = "*"
+pytest-xdist = "*"
+ruff = "*"
+typed-argument-parser = "*"
+types-pillow = "*"
+types-tqdm = "*"
+wheel = "*"
+
+[tool.pytest.ini_options]
+addopts = "tests --cov=gimmecpg_python/ --cov-report=term-missing:skip-covered --cov-report=xml --dist=loadgroup -n 8 --durations=5"
+
+[tool.coverage.report]
+exclude_lines = ["no cov", "if __name__ == .__main__.:", "if TYPE_CHECKING:"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+
+[tool.ruff.format]
+docstring-code-format = true
+
+[tool.ruff.lint]
+extend-select = ["UP", "RUF", "I", "D", "E501"]
+ignore = ["UP036"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["D100", "D103", "D104"]
+
+[tool.mypy]
+strict = true
+disable_error_code = ["type-arg"]
+
+# NOTE: uncomment these lines and edit accordingly if you have modules still without typings
+# [[tool.mypy.overrides]]
+# module = ["sklearn.*",]
+# ignore_missing_imports = true
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+tag_format = "$version"
+version_files = ["gimmecpg_python/__init__.py"]
+version_scheme = "pep440"
+version_provider = "poetry"
+update_changelog_on_bump = true
+major_version_zero = true
