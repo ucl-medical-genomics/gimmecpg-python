@@ -15,6 +15,11 @@ classifiers = ["Programming Language :: Python :: 3 :: Only"]
 
 [tool.poetry.dependencies]
 python = "^3.12"
+polars = "0.20.7"
+h2o = "3.44.0.3"
+pandas = "~2.2.1"
+numpy = "~1.26.4"
+pyarrow = "~15.0.0"
 
 [tool.poetry.scripts]
 gimmecpg_python = "gimmecpg_python.main:main"
