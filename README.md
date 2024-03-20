@@ -14,6 +14,7 @@ Python version of GIMMEcpg, developed with Polars and H2OAutoML
 
 ## Getting Started
 
+```
 usage: main.py [-h] -i INPUT -o OUTPUT -r REF [-c MINCOV] [-d MAXDISTANCE]
 [-k] [-a] [-t RUNTIME] [-m MAXMODELS] [-s]
 
@@ -36,6 +37,7 @@ together. Default = False
 --runTime. Excludes Stacked Ensemble models
 -s, --streaming Choose if streaming is required (for files that exceed memory).
 Default = False
+```
 
 ### Prerequisites
 
