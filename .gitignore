@@ -1,7 +1,5 @@
 # ignore all the caches
-./gimmecpg_python/__pycache__/
-*.py[cod]
-*$py.class
+**/__pycache__/
 .mypy_cache/
 .ruff_cache/
 
