@@ -43,7 +43,7 @@ parser.add_argument(
 parser.add_argument(
     "-k",
     "--collapse",
-    action="store_true",
+    action="store_false",
     required=False,
     help="Choose whether to merge methylation sites on opposite \
                        strands together. Default = False",
