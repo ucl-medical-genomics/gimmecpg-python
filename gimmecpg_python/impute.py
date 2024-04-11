@@ -18,6 +18,8 @@ def fast_impute(lf, dist):
         pl.col("sample").fill_null(pl.lit("imputed")),
     )
 
+    imputed = imputed.select(["chr", "start", "end", "strand", "sample", "avg"])
+
     return imputed
 
 
@@ -83,6 +85,8 @@ def h2oTraining(lf, maxTime, maxModels, dist, streaming):
             avg=pl.when(pl.col("avg") > 100).then(100).when(pl.col("avg") < 0).then(0).otherwise(pl.col("avg"))
         )
     )
+
+    res = res.select(["chr", "start", "end", "strand", "sample", "avg"])
 
     print(lb)
     return res

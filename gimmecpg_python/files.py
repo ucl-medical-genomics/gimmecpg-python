@@ -90,9 +90,8 @@ def save_files_normal(file, outpath):
         .select(pl.col("sample").filter(pl.col("sample") != "imputed").first())
         .item()
     )
-    res = file.select(["chr", "start", "end", "strand", "sample", "avg"])
     outfile = Path(outpath, "imputed_" + filename + ".bed")
-    res.write_csv(outfile, separator="\t")
+    file.write_csv(outfile, separator="\t")
 
 
 def save_files_streaming(file, outpath):
@@ -102,6 +101,5 @@ def save_files_streaming(file, outpath):
         .select(pl.col("sample").filter(pl.col("sample") != "imputed").first())
         .item()
     )
-    res = file.select(["chr", "start", "end", "strand", "sample", "avg"])
     outfile = Path(outpath, "imputed_" + filename + ".bed")
-    res.write_csv(outfile, separator="\t")
+    file.write_csv(outfile, separator="\t")
