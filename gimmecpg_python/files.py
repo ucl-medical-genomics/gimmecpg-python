@@ -41,11 +41,13 @@ def read_files(file, mincov, collapse):
     )
 
     if collapse:
-        pos = bed.filter(pl.col("strand") == "+").with_columns((pl.col("end")).alias("reverse_start"))
-        neg = bed.filter(pl.col("strand") == "-")  # add column for start site on complementary strand
+        pos = bed.filter(pl.col("strand") == "+").with_columns(
+            (pl.col("end")).alias("reverse_start")
+        )  # add column for start site on complementary strand
+        neg = bed.filter(pl.col("strand") == "-")
 
-        # wCompStart = bed.with_columns((pl.col('end'))
-        # .alias('reverse_start')) # if data is 0-index Start side
+        # wCompStart = bed.with_columns((pl.col('end') + 1)
+        # .alias('reverse_start')) # if data is 1-index Start side
 
         joint = neg.join(
             pos, left_on=["chr", "start"], right_on=["chr", "reverse_start"], how="outer_coalesce"
