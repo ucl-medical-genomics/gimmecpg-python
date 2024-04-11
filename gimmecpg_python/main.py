@@ -88,13 +88,10 @@ args = parser.parse_args()
 # Read file in as LazyFrame, collapse strands if needed. #
 ##########################################################
 
+print(f"Merge methylation sites on opposite strands = {args.collapse}")
+
 bed_files = args.input + "/*.bed"
 bed_paths = glob.glob(bed_files)
-
-if args.collapse:
-    print("Merge methylation sites on opposite strands = TRUE")
-else:
-    print("Merge methylation sites on opposite strands = FALSE")
 
 lf_list = [read_files(bed, args.minCov, args.collapse) for bed in bed_paths]
 
@@ -118,25 +115,31 @@ if not args.accurate:
     imputed_lfs = [fast_impute(lf, args.maxDistance) for lf in missing]  # RESULT
     print("Fast imputation mode")
     if args.streaming:
-        print("Saving fast imputation results in streaming mode")
+        print("Collecting fast imputation results in streaming mode")
         for sample in imputed_lfs:
             save_files_streaming(sample, args.output)
+        print("Files Saved")
     else:
-        print("Saving fast imputation results")
+        print("Collecting fast imputation results")
         dfs = pl.collect_all(imputed_lfs)
         for sample in dfs:
             save_files_normal(sample, args.output)
+        print("Files Saved")
 else:
     print("Preparing for H2O AutoML training")
     lead_prediction = [
         h2oTraining(lf, args.runTime, args.maxModels, args.maxDistance, args.streaming) for lf in missing
     ]  # RESULT
     if args.streaming:
-        print("Saving accurate imputation results in streaming mode")
+        print("Collecting accurate imputation results in streaming mode")
         for sample in lead_prediction:
             save_files_streaming(sample, args.output)
+        print("Files Saved")
     else:
-        print("Saving accurate imputation results")
+        print("Collecting accurate imputation results")
         dfs = pl.collect_all(lead_prediction)
         for sample in dfs:
             save_files_normal(sample, args.output)
+        print("Files Saved")
+
+print("Imputation complete")

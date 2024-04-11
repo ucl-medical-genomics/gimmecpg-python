@@ -40,7 +40,6 @@ def h2oTraining(lf, maxTime, maxModels, dist, streaming):
     to_predict_lf = lf.filter(pl.col("avg").is_null())
 
     if dist is not None:
-        print(f"Imputing methylation for missing sites less than {dist} bases from each neighbour")
         to_predict_lf = to_predict_lf.filter((pl.col("f_dist") < dist) & (pl.col("b_dist") < dist))
 
     if streaming:
