@@ -119,8 +119,7 @@ if not args.accurate:
     print("Fast imputation mode")
     if args.streaming:
         print("Saving fast imputation results in streaming mode")
-        dfs = pl.collect_all(imputed_lfs, streaming=True)
-        for sample in dfs:
+        for sample in imputed_lfs:
             save_files_streaming(sample, args.output)
     else:
         print("Saving fast imputation results")
@@ -134,8 +133,7 @@ else:
     ]  # RESULT
     if args.streaming:
         print("Saving accurate imputation results in streaming mode")
-        dfs = pl.collect_all(lead_prediction, streaming=True)
-        for sample in dfs:
+        for sample in lead_prediction:
             save_files_streaming(sample, args.output)
     else:
         print("Saving accurate imputation results")

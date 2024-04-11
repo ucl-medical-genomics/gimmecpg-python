@@ -96,6 +96,7 @@ def save_files_normal(file, outpath):
 
 def save_files_streaming(file, outpath):
     """Save files by streaming."""
+    file = file.collect(streaming=True)
     filename = (
         file.unique(subset="sample", keep="any")
         .select(pl.col("sample").filter(pl.col("sample") != "imputed").first())
