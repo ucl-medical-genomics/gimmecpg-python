@@ -88,7 +88,7 @@ args = parser.parse_args()
 # Read file in as LazyFrame, collapse strands if needed. #
 ##########################################################
 
-bed_files = args.input + "/*_1_cpg.bed"
+bed_files = args.input + "/*.bed"
 bed_paths = glob.glob(bed_files)
 
 if args.collapse:
