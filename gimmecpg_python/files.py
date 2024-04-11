@@ -41,18 +41,14 @@ def read_files(file, mincov, collapse):
     )
 
     if collapse:
-        pos = bed.filter(pl.col("strand") == "+")
-        neg = bed.filter(pl.col("strand") == "-")
-
-        posPlus1 = pos.with_columns(
-            (pl.col("end") + 1).alias("reverse_start")
-        )  # add column for start site on complementary strand
+        pos = bed.filter(pl.col("strand") == "+").with_columns((pl.col("end")).alias("reverse_start"))
+        neg = bed.filter(pl.col("strand") == "-")  # add column for start site on complementary strand
 
         # wCompStart = bed.with_columns((pl.col('end'))
         # .alias('reverse_start')) # if data is 0-index Start side
 
         joint = neg.join(
-            posPlus1, left_on=["chr", "start"], right_on=["chr", "reverse_start"], how="outer_coalesce"
+            pos, left_on=["chr", "start"], right_on=["chr", "reverse_start"], how="outer_coalesce"
         ).with_columns(pl.concat_str([pl.col("strand"), pl.col("strand_right")], separator="/", ignore_nulls=True))
 
         results = (
@@ -87,7 +83,11 @@ def read_files(file, mincov, collapse):
 
 def save_files_normal(file, outpath):
     """Save files w/o streaming."""
-    filename = file.select(pl.col("sample").filter(pl.col("sample") != "imputed").first()).item()
+    filename = (
+        file.unique(subset="sample", keep="any")
+        .select(pl.col("sample").filter(pl.col("sample") != "imputed").first())
+        .item()
+    )
     res = file.select(["chr", "start", "end", "strand", "sample", "avg"])
     outfile = Path(outpath, "imputed_" + filename + ".bed")
     res.write_csv(outfile, separator="\t")
@@ -95,8 +95,11 @@ def save_files_normal(file, outpath):
 
 def save_files_streaming(file, outpath):
     """Save files by streaming."""
-    fetch = file.unique(subset="sample").collect()
-    filename = fetch.select(pl.col("sample").filter(pl.col("sample") != "imputed").first()).item()
+    filename = (
+        file.unique(subset="sample", keep="any")
+        .select(pl.col("sample").filter(pl.col("sample") != "imputed").first())
+        .item()
+    )
     res = file.select(["chr", "start", "end", "strand", "sample", "avg"])
     outfile = Path(outpath, "imputed_" + filename + ".bed")
     res.write_csv(outfile, separator="\t")
