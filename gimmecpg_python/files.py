@@ -37,7 +37,6 @@ def read_files(file, mincov, collapse):
                 "column_11": "percent_methylated",
             }
         )  # rename to something that makes more sense
-        .filter(pl.col("coverage") > mincov)  # filter by coverage first
     )
 
     if collapse:
@@ -69,18 +68,23 @@ def read_files(file, mincov, collapse):
                     )
                     / (pl.col("coverage") + pl.col("coverage_right"))
                 ).alias("avg")
+            )
+            .with_columns(
+                pl.when(pl.col("strand_right").is_not_null())
+                .then(((pl.col("coverage") + pl.col("coverage_right")) / 2).alias("avg_coverage"))
+                .otherwise(pl.col("coverage").alias("avg_coverage"))
             )  # calculated weighted average
-            .select(["chr", "start", "end", "strand", "avg"])
-            .with_columns(pl.lit(name).alias("sample"))
         )
     else:
-        results = (
-            bed.with_columns(pl.col("coverage").alias("avg"))
-            .select(["chr", "start", "end", "strand", "avg"])
-            .with_columns(pl.lit(name).alias("sample"))
-        )
+        results = bed.with_columns(pl.col("percent_methylated").alias("avg"), pl.col("coverage").alias("avg_coverage"))
 
-    return results
+    cov_results = (
+        results.filter(pl.col("avg_coverage") > mincov)
+        .select(["chr", "start", "end", "strand", "avg"])
+        .with_columns(pl.lit(name).alias("sample"))
+    )  # filter by coverage
+
+    return cov_results
 
 
 def save_files_normal(file, outpath):
