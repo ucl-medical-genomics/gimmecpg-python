@@ -25,7 +25,7 @@ def fast_impute(lf, dist):
 
 def h2oTraining(lf, maxTime, maxModels, dist, streaming):
     """Accurate imputation."""
-    full = (
+    known_lf = (
         lf.filter(pl.col("avg").is_not_null())
         .with_columns(
             pl.col("start").shift(-1).over("chr").alias("f_start"),
@@ -35,25 +35,26 @@ def h2oTraining(lf, maxTime, maxModels, dist, streaming):
         .with_columns(
             (pl.col("start") - pl.col("b_start")).alias("b_dist"), (pl.col("f_start") - pl.col("start")).alias("f_dist")
         )
+        .select(["avg", "b_meth", "f_meth", "b_dist", "f_dist"])
     )
 
-    to_predict_lf = lf.filter(pl.col("avg").is_null())
+    to_predict_lf = lf.filter(pl.col("avg").is_null()).drop(["end_right", "b_start", "f_start"])
 
     if dist is not None:
         to_predict_lf = to_predict_lf.filter((pl.col("f_dist") < dist) & (pl.col("b_dist") < dist))
 
     if streaming:
-        full = full.collect(streaming=True)
+        known = known_lf.collect(streaming=True)
         to_predict = to_predict_lf.collect(streaming=True)
     else:
-        full = full.collect()
+        known = known_lf.collect()
         to_predict = to_predict_lf.collect()
 
     print("Starting H2O AutoML training")
     h2o.init()
 
-    full = h2o.H2OFrame(full.to_pandas(use_pyarrow_extension_array=True))  # make sure it's the right format
-    full[["avg", "b_meth", "f_meth", "b_dist", "f_dist"]] = full[
+    known = h2o.H2OFrame(known.to_pandas(use_pyarrow_extension_array=True))  # make sure it's the right format
+    known[["avg", "b_meth", "f_meth", "b_dist", "f_dist"]] = known[
         ["avg", "b_meth", "f_meth", "b_dist", "f_dist"]
     ].asnumeric()
 
@@ -66,7 +67,7 @@ def h2oTraining(lf, maxTime, maxModels, dist, streaming):
     x = ["b_meth", "f_meth", "b_dist", "f_dist"]  # specify the predictors
 
     aml = H2OAutoML(max_runtime_secs=maxTime, max_models=maxModels, seed=1)
-    aml.train(y=y, x=x, training_frame=full)  # training_frame = train, leaderboard_frame = test
+    aml.train(y=y, x=x, training_frame=known)  # training_frame = train, leaderboard_frame = test
     lb = aml.leaderboard
 
     prediction = aml.leader.predict(to_predict)
