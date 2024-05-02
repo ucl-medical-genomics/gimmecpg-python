@@ -100,8 +100,7 @@ lf_list = [read_files(bed, args.minCov, args.collapse) for bed in bed_paths]
 # Identify missing sites #
 ##########################
 
-ref = args.ref
-missing = [missing_sites(lf, ref) for lf in lf_list]
+missing = [missing_sites(lf, args.ref) for lf in lf_list]
 
 
 ################################
