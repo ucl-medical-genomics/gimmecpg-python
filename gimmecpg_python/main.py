@@ -2,6 +2,7 @@
 
 import argparse
 import glob
+import sys
 
 import polars as pl
 from files import read_files, save_files_normal, save_files_streaming
@@ -18,8 +19,9 @@ parser.add_argument(
     "--input",
     action="store",
     required=True,
-    help="Path to directory of bed files (make sure it contains only the bed files to be analysed)",
+    help="Path to directory of bed files",
 )
+parser.add_argument("-p", "--pattern", action="store", required=False, help="Pattern to select specific files")
 parser.add_argument("-o", "--output", action="store", required=True, help="Path to output directory")
 parser.add_argument("-r", "--ref", action="store", required=True, help="Path to reference methylation file")
 parser.add_argument(
@@ -88,10 +90,22 @@ args = parser.parse_args()
 # Read file in as LazyFrame, collapse strands if needed. #
 ##########################################################
 
-print(f"Merge methylation sites on opposite strands = {args.collapse}")
+# select files
+if args.pattern:
+    bed_files = args.input + "/*" + args.pattern + "*.bed"
+else:
+    bed_files = args.input + "/*.bed"
 
-bed_files = args.input + "/*.bed"
+
 bed_paths = glob.glob(bed_files)
+
+# check files exist
+if not bed_paths:
+    print("ERROR: No matching Bed file(s) found. GIMMEcpg terminating.")
+    sys.exit(1)
+
+
+print(f"Merge methylation sites on opposite strands = {args.collapse}")
 
 lf_list = [read_files(bed, args.minCov, args.collapse) for bed in bed_paths]
 
