@@ -110,33 +110,28 @@ missing = [missing_sites(lf, args.ref) for lf in lf_list]
 if args.maxDistance is not None:
     print(f"Imputing methylation for missing sites less than {args.maxDistance} bases from each neighbour")
 
+results = []
+
 if not args.accurate:
-    imputed_lfs = [fast_impute(lf, args.maxDistance) for lf in missing]  # RESULT
     print("Fast imputation mode")
-    if args.streaming:
-        print("Collecting fast imputation results in streaming mode")
-        for sample in imputed_lfs:
-            save_files_streaming(sample, args.output)
-        print("Files Saved")
-    else:
-        print("Collecting fast imputation results")
-        dfs = pl.collect_all(imputed_lfs)
-        for sample in dfs:
-            save_files_normal(sample, args.output)
-        print("Files Saved")
+    imputed_lfs = [fast_impute(lf, args.maxDistance) for lf in missing]  # RESULT
+    results = imputed_lfs
 else:
     print("Preparing for H2O AutoML training")
     lead_prediction = [
         h2oTraining(lf, args.runTime, args.maxModels, args.maxDistance, args.streaming) for lf in missing
     ]  # RESULT
-    if args.streaming:
-        print("Collecting accurate imputation results in streaming mode")
-        for sample in lead_prediction:
+    results = lead_prediction
+
+
+if args.streaming:
+        print("Collecting fast imputation results in streaming mode")
+        for sample in results:
             save_files_streaming(sample, args.output)
         print("Files Saved")
-    else:
-        print("Collecting accurate imputation results")
-        dfs = pl.collect_all(lead_prediction)
+else:
+        print("Collecting fast imputation results")
+        dfs = pl.collect_all(results)
         for sample in dfs:
             save_files_normal(sample, args.output)
         print("Files Saved")
