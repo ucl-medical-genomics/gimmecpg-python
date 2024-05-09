@@ -23,8 +23,8 @@ def fast_impute(lf, dist):
     return imputed
 
 
-def h2oTraining(lf, maxTime, maxModels, dist, streaming):
-    """Accurate imputation."""
+def h2oPrep(lf, dist, streaming):
+    """Prepare training and testing frames."""
     known_lf = (
         lf.filter(pl.col("avg").is_not_null())
         .with_columns(
@@ -50,16 +50,24 @@ def h2oTraining(lf, maxTime, maxModels, dist, streaming):
         known = known_lf.collect()
         to_predict = to_predict_lf.collect()
 
+    return known, to_predict, to_predict_lf
+
+
+def h2oTraining(lf, maxTime, maxModels, dist, streaming):  
+    """Do training."""
     print("Starting H2O AutoML training")
+
+    training, test, to_predict_lf = h2oPrep(lf, dist, streaming)
+
     h2o.init()
 
-    known = h2o.H2OFrame(known.to_pandas(use_pyarrow_extension_array=True))  # make sure it's the right format
-    known[["avg", "b_meth", "f_meth", "b_dist", "f_dist"]] = known[
+    trainingFrame = h2o.H2OFrame(training.to_pandas(use_pyarrow_extension_array=True))  # make sure it's the right format
+    trainingFrame[["avg", "b_meth", "f_meth", "b_dist", "f_dist"]] = trainingFrame[
         ["avg", "b_meth", "f_meth", "b_dist", "f_dist"]
     ].asnumeric()
 
-    to_predict = h2o.H2OFrame(to_predict.to_pandas(use_pyarrow_extension_array=True))  # make sure it's the right format
-    to_predict[["avg", "b_meth", "f_meth", "b_dist", "f_dist"]] = to_predict[
+    testingFrame = h2o.H2OFrame(test.to_pandas(use_pyarrow_extension_array=True))  # make sure it's the right format
+    testingFrame[["avg", "b_meth", "f_meth", "b_dist", "f_dist"]] = testingFrame[
         ["avg", "b_meth", "f_meth", "b_dist", "f_dist"]
     ].asnumeric()
 
@@ -67,10 +75,10 @@ def h2oTraining(lf, maxTime, maxModels, dist, streaming):
     x = ["b_meth", "f_meth", "b_dist", "f_dist"]  # specify the predictors
 
     aml = H2OAutoML(max_runtime_secs=maxTime, max_models=maxModels, seed=1)
-    aml.train(y=y, x=x, training_frame=known)  # training_frame = train, leaderboard_frame = test
+    aml.train(y=y, x=x, training_frame=trainingFrame)  # training_frame = train, leaderboard_frame = test
     lb = aml.leaderboard
 
-    prediction = aml.leader.predict(to_predict)
+    prediction = aml.leader.predict(testingFrame)
     prediction_lf = pl.LazyFrame(prediction.as_data_frame())
 
     imputed_lf = pl.concat([to_predict_lf, prediction_lf], how="horizontal")
