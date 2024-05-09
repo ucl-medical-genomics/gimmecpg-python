@@ -5,6 +5,7 @@ import glob
 import sys
 
 import polars as pl
+from itertools import batched
 from files import read_files, save_files_normal, save_files_streaming
 from impute import fast_impute, h2oTraining
 from missing import missing_sites
@@ -115,7 +116,7 @@ lf_list = [read_files(bed, args.minCov, args.collapse) for bed in bed_paths]
 ##########################
 
 missing = [missing_sites(lf, args.ref) for lf in lf_list]
-
+print("Identified missing sites")
 
 ################################
 # Imputation (default is fast) #
@@ -131,7 +132,7 @@ if not args.accurate:
     imputed_lfs = [fast_impute(lf, args.maxDistance) for lf in missing]  # RESULT
     results = imputed_lfs
 else:
-    print("Preparing for H2O AutoML training")
+    print("Accurate mode: prepare for H2O AutoML training")
     lead_prediction = [
         h2oTraining(lf, args.runTime, args.maxModels, args.maxDistance, args.streaming) for lf in missing
     ]  # RESULT
@@ -142,12 +143,20 @@ if args.streaming:
         print("Collecting fast imputation results in streaming mode")
         for sample in results:
             save_files_streaming(sample, args.output)
-        print("Files Saved")
+        print("All files Saved")
 else:
         print("Collecting fast imputation results")
-        dfs = pl.collect_all(results)
-        for sample in dfs:
-            save_files_normal(sample, args.output)
-        print("Files Saved")
+        if len(results) <= 10:
+            dfs = pl.collect_all(results)
+            for sample in dfs:
+                save_files_normal(sample, args.output)
+            print("All files Saved")
+        else:
+            for batch in batched(results, 10):
+                dfs = pl.collect_all(batch)
+                print("Saving in batches")
+                for sample in dfs:
+                    save_files_normal(sample, args.output)
+            print("All files Saved")
 
 print("Imputation complete")
