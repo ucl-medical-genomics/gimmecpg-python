@@ -1,8 +1,11 @@
 """Input and output files."""
 
-from pathlib import Path
+import concurrent.futures
 
 import polars as pl
+from pathlib import Path
+
+
 
 
 def collapse_strands(bed):
@@ -99,26 +102,54 @@ def read_files(file, mincov, collapse):
 
 
 
-def save_files_normal(file, outpath):
+
+def save_files(df, outpath):
     """Save files w/o streaming."""
     filename = (
-        file.unique(subset="sample", keep="any")
+        df.unique(subset="sample", keep="any")
         .select(pl.col("sample").filter(pl.col("sample") != "imputed").first())
         .item()
     )
     outfile = Path(outpath, "imputed_" + filename + ".bed")
-    file.write_csv(outfile, separator="\t")
-    print(f"{filename} saved")
+    print(f"Saving {filename}")
+    df.write_csv(outfile, separator="\t")
+    return f"Saved {filename}"
 
 
-def save_files_streaming(file, outpath):
-    """Save files by streaming."""
-    file = file.collect(streaming=True)
-    filename = (
-        file.unique(subset="sample", keep="any")
-        .select(pl.col("sample").filter(pl.col("sample") != "imputed").first())
-        .item()
-    )
-    outfile = Path(outpath, "imputed_" + filename + ".bed")
-    file.write_csv(outfile, separator="\t")
-    print(f"{filename} saved")
+def parallel_save(dfs, outpath):
+    """Save files in parallel"""
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = {executor.submit(save_files, df, outpath): df for df in dfs}
+
+    for future in concurrent.futures.as_completed(futures):
+        df = futures[future]
+        result = future.result()
+        print(f"{result}")
+
+
+
+# def save_files_normal(file, outpath):
+#     """Save files w/o streaming."""
+#     filename = (
+#         file.unique(subset="sample", keep="any")
+#         .select(pl.col("sample").filter(pl.col("sample") != "imputed").first())
+#         .item()
+#     )
+#     outfile = Path(outpath, "imputed_" + filename + ".bed")
+#     print(f"Saving {filename}")
+#     file.write_csv(outfile, separator="\t")
+#     return f"Saved {filename}"
+
+
+# def save_files_streaming(file, outpath):
+#     """Save files by streaming."""
+#     # file = file.collect(streaming=True)
+#     filename = (
+#         file.unique(subset="sample", keep="any")
+#         .select(pl.col("sample").filter(pl.col("sample") != "imputed").first())
+#         .item()
+#     )
+#     outfile = Path(outpath, "imputed_" + filename + ".bed")
+#     print(f"Saving {filename}")
+#     file.write_csv(outfile, separator="\t")
+#     return f"Saved {filename}"
