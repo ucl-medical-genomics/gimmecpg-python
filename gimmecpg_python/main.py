@@ -157,28 +157,28 @@ else:
 batch_limit = 10
 
 if len(results) <= batch_limit:
-    print("Not batched")
+    print("Batch mode OFF")
     if args.streaming:
-        print("Collecting fast imputation results in streaming mode")
+        print("Collecting results in streaming mode")
         dfs = pl.collect_all(results, streaming = True)
         parallel_save(dfs, args.output)
         print("All files Saved")
     else:
-        print("Collecting fast imputation results")
+        print("Collecting results")
         dfs = pl.collect_all(results)
         parallel_save(dfs, args.output)
         print("All files Saved")
 else:
     print(f"Batches of {batch_limit}")
     if args.streaming:
-        print("Collecting batches of fast imputation results in streaming mode")
+        print("Collecting batches of results in streaming mode")
         for batch in batched(results, batch_limit):
             dfs = pl.collect_all(batch, streaming = True)
             print("Saving in batches")
             parallel_save(dfs, args.output)
         print("All files Saved")
     else:
-        print("Collecting batches of fast imputation results")
+        print("Collecting batches of results")
         for batch in batched(results, batch_limit):
             dfs = pl.collect_all(batch)
             print("Saving in batches")
