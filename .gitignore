@@ -1,5 +1,6 @@
 # ignore all the caches
 **/__pycache__/
+*/test/__pycache__/
 *.pyc
 .mypy_cache/
 .ruff_cache/
