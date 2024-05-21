@@ -10,25 +10,23 @@ from pathlib import Path
 
 def collapse_strands(bed):
     """Collapse strands."""
-    pos = bed.filter(pl.col("strand") == "+").with_columns(
-            (pl.col("end")).alias("reverse_start")
-    )  # add column for start site on complementary strand
-    neg = bed.filter(pl.col("strand") == "-")
 
-        # wCompStart = bed.with_columns((pl.col('end') + 1)
-        # .alias('reverse_start')) # if data is 1-index Start side
+    pos = bed.filter(pl.col("strand") == "+")  # add column for start site on complementary strand
+    neg = bed.filter(pl.col("strand") == "-").with_columns(
+            (pl.col("start") - 1).alias("start")
+    )
+    
 
     joint = neg.join(
-        pos, left_on=["chr", "start"], right_on=["chr", "reverse_start"], how="outer_coalesce"
+        pos, on=["chr", "start"], how="outer_coalesce"
     ).with_columns(pl.concat_str([pl.col("strand"), pl.col("strand_right")], separator="/", ignore_nulls=True))
 
     merged = (
         joint.with_columns(
-            pl.min_horizontal("start", "start_right").alias("start"),
             pl.max_horizontal("end", "end_right").alias("end"),
             pl.col(["percent_methylated_right", "coverage_right", "percent_methylated", "coverage"])
             .fill_null(0)
-            .cast(pl.UInt16),
+            .cast(pl.UInt16)
         )
         .with_columns(
             (
@@ -40,12 +38,11 @@ def collapse_strands(bed):
             ).alias("avg")
         )
         .with_columns(
-            pl.when(pl.col("strand_right").is_not_null())
-            .then(((pl.col("coverage") + pl.col("coverage_right")) / 2).alias("avg_coverage"))
-            .otherwise(pl.col("coverage").alias("avg_coverage"))
+            (pl.col("coverage") + pl.col("coverage_right")).alias("total_coverage")
         )  # calculated weighted average
 
     )
+
     return merged
 
 
@@ -84,16 +81,16 @@ def read_files(file, mincov, collapse):
         )  # rename to something that makes more sense
         .with_columns(
             pl.col("chr").str.replace(r"(?i)Chr", "") # remove "chr" from Chr column to match reference
-)
+        )
     )
 
-    if collapse:
+    if collapse == True:
         data = collapse_strands(bed)
     else:
-        data = bed.with_columns(pl.col("percent_methylated").alias("avg"), pl.col("coverage").alias("avg_coverage"))
+        data = bed.with_columns(pl.col("percent_methylated").alias("avg"), pl.col("coverage").alias("total_coverage"))
 
     data_cov_filt = (
-        data.filter(pl.col("avg_coverage") > mincov)
+        data.filter(pl.col("total_coverage") >= mincov)
         .select(["chr", "start", "end", "strand", "avg"])
         .with_columns(pl.lit(name).alias("sample"))
     )  # filter by coverage
