@@ -17,13 +17,13 @@ def collapse_strands(bed):
     )
     
 
-    joint = neg.join(
-        pos, on=["chr", "start"], how="outer_coalesce"
+    joint = pos.join(
+        neg, on=["chr", "start"], how="outer_coalesce"
     ).with_columns(pl.concat_str([pl.col("strand"), pl.col("strand_right")], separator="/", ignore_nulls=True))
 
     merged = (
         joint.with_columns(
-            pl.max_horizontal("end", "end_right").alias("end"),
+            pl.when(pl.col("strand") == "-").then(pl.col("start") + 1).otherwise(pl.col("start") + 0).alias("start"),
             pl.col(["percent_methylated_right", "coverage_right", "percent_methylated", "coverage"])
             .fill_null(0)
             .cast(pl.UInt16)
@@ -91,7 +91,7 @@ def read_files(file, mincov, collapse):
 
     data_cov_filt = (
         data.filter(pl.col("total_coverage") >= mincov)
-        .select(["chr", "start", "end", "strand", "avg"])
+        .select(["chr", "start", "strand", "avg"])
         .with_columns(pl.lit(name).alias("sample"))
     )  # filter by coverage
 
