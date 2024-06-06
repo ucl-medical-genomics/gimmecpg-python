@@ -18,7 +18,7 @@ def collapse_strands(bed):
     
 
     joint = pos.join(
-        neg, on=["chr", "start"], how="outer_coalesce"
+        neg, on=["chr", "start"], how="full", coalesce = True
     ).with_columns(pl.concat_str([pl.col("strand"), pl.col("strand_right")], separator="/", ignore_nulls=True))
 
     merged = (

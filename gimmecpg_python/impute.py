@@ -87,7 +87,7 @@ def h2oTraining(lf, maxTime, maxModels, dist, streaming):
         lf = lf.filter((pl.col("f_dist") < dist) & (pl.col("b_dist") < dist))
 
     res = (
-        lf.join(imputed_lf, on=["chr", "start", "end"], how="outer_coalesce")
+        lf.join(imputed_lf, on=["chr", "start", "end"], how="full", coalesce = True)
         .with_columns(pl.col("avg").fill_null(pl.col("predict")), pl.col("sample").fill_null(pl.lit("imputed")))
         .with_columns(
             avg=pl.when(pl.col("avg") > 100).then(100).when(pl.col("avg") < 0).then(0).otherwise(pl.col("avg"))
