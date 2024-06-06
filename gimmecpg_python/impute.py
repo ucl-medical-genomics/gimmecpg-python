@@ -96,5 +96,5 @@ def h2oTraining(lf, maxTime, maxModels, dist, streaming):
 
     res = res.select(["chr", "start", "end", "strand", "sample", "avg"])
 
-    print(lb)
+    lb.head(rows=lb.nrows)
     return res
