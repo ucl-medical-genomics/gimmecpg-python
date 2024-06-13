@@ -57,14 +57,14 @@ def read_files(file, mincov, collapse):
             separator="\t",
             skip_rows=1,
             has_header=False,
-            dtypes={
+            dtypes = { 
                 "column_1": pl.Utf8,
                 "column_2": pl.UInt64,
                 "column_3": pl.UInt64,
                 "column_6": pl.Utf8,
                 "column_10": pl.UInt16,
-                "column_11": pl.UInt16,
-            },
+                "column_11": pl.UInt16 
+            }
         )  # cannot use scan() on zipped file
         .select(
             ["column_1", "column_2", "column_3", "column_6", "column_10", "column_11"]
@@ -90,9 +90,10 @@ def read_files(file, mincov, collapse):
         data = bed.with_columns(pl.col("percent_methylated").alias("avg"), pl.col("coverage").alias("total_coverage"))
 
     data_cov_filt = (
-        data.filter(pl.col("total_coverage") >= mincov)
+        data.filter(pl.col("total_coverage") > mincov)
         .select(["chr", "start", "strand", "avg"])
         .with_columns(pl.lit(name).alias("sample"))
+        .cast({"chr": pl.Utf8, "start": pl.UInt64, "avg": pl.Float64, "sample": pl.Utf8})
     )  # filter by coverage
 
     return data_cov_filt
