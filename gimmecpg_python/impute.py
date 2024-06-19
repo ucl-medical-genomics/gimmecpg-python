@@ -42,6 +42,7 @@ def h2oPrep(lf, dist, streaming):
 
     if dist is not None:
         to_predict_lf = to_predict_lf.filter((pl.col("f_dist") < dist) & (pl.col("b_dist") < dist))
+        known_lf = known_lf.filter((pl.col("f_dist") < dist) & (pl.col("b_dist") < dist))
 
     if streaming:
         known = known_lf.collect(streaming=True)
@@ -53,7 +54,7 @@ def h2oPrep(lf, dist, streaming):
     return known, to_predict, to_predict_lf
 
 
-def h2oTraining(lf, maxTime, maxModels, dist, streaming):  
+def h2oTraining(lf, maxTime, maxModels, dist, streaming):
     """Do training."""
     print("Starting H2O AutoML training")
 
@@ -61,7 +62,9 @@ def h2oTraining(lf, maxTime, maxModels, dist, streaming):
 
     h2o.init()
 
-    trainingFrame = h2o.H2OFrame(training.to_pandas(use_pyarrow_extension_array=True))  # make sure it's the right format
+    trainingFrame = h2o.H2OFrame(
+        training.to_pandas(use_pyarrow_extension_array=True)
+    )  # make sure it's the right format
     trainingFrame[["avg", "b_meth", "f_meth", "b_dist", "f_dist"]] = trainingFrame[
         ["avg", "b_meth", "f_meth", "b_dist", "f_dist"]
     ].asnumeric()
@@ -87,7 +90,7 @@ def h2oTraining(lf, maxTime, maxModels, dist, streaming):
         lf = lf.filter((pl.col("f_dist") < dist) & (pl.col("b_dist") < dist))
 
     res = (
-        lf.join(imputed_lf, on=["chr", "start", "end"], how="full", coalesce = True)
+        lf.join(imputed_lf, on=["chr", "start", "end"], how="full", coalesce=True)
         .with_columns(pl.col("avg").fill_null(pl.col("predict")), pl.col("sample").fill_null(pl.lit("imputed")))
         .with_columns(
             avg=pl.when(pl.col("avg") > 100).then(100).when(pl.col("avg") < 0).then(0).otherwise(pl.col("avg"))
