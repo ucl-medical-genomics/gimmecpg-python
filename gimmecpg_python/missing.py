@@ -12,13 +12,15 @@ def missing_sites(bed, ref):
     )
 
     missing = ref.join(bed, on=["chr", "start"], how="left")
+    print(missing.filter(pl.col("avg").is_not_null()).collect())
+    quit()
 
     missing_mat = (
         missing.with_columns(
             pl.when(pl.col("avg").is_not_null()).then(pl.col("start")).alias("b_start"),
             pl.when(pl.col("avg").is_not_null()).then(pl.col("start")).alias("f_start"),
             pl.when(pl.col("avg").is_not_null()).then(pl.col("avg")).alias("b_meth"),
-            pl.when(pl.col("avg").is_not_null()).then(pl.col("avg")).alias("f_meth")
+            pl.when(pl.col("avg").is_not_null()).then(pl.col("avg")).alias("f_meth"),
         )
         .with_columns(
             pl.col(["f_start", "f_meth"]).backward_fill().over("chr"),
