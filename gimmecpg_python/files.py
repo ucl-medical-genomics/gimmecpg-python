@@ -81,19 +81,22 @@ def read_files(file, mincov, collapse):
     else:
         data = bed.with_columns(pl.col("percent_methylated").alias("avg"), pl.col("coverage").alias("total_coverage"))
 
-    maxcov = data.select(pl.col("total_coverage").quantile(0.999, "nearest")).collect().item()
+    maxcov = data.select(pl.col("total_coverage").quantile(0.999, "nearest"))
 
-    data_cov_filt = (
-        data.filter(pl.col("total_coverage") >= mincov)
-        # .select(["chr", "start", "strand", "avg"])
-        # .with_columns(pl.lit(name).alias("sample"))
-        # .cast({"chr": pl.Utf8, "start": pl.UInt64, "avg": pl.Float64, "sample": pl.Utf8})
-    )  # filter by coverage
+    test = data.with_columns(
+        quant = pl.col("total_coverage").quantile(0.999, "nearest")
+    ).with_columns(
+        over = pl.col("total_coverage") - pl.col("quant"))
 
-    with pl.Config(tbl_cols=-1):
-        print(maxcov)
-    quit()
+    # data_cov_filt = (
+    #     data.filter((pl.col("total_coverage") >= mincov) & (pl.col("total_coverage") < maxcov))
+    #     .select(["chr", "start", "strand", "avg"])
+    #     .with_columns(pl.lit(name).alias("sample"))
+    #     .cast({"chr": pl.Utf8, "start": pl.UInt64, "avg": pl.Float64, "sample": pl.Utf8})
+    # )  # filter by coverage
 
+    print(test.fetch(10))
+    quit(0)
     return data_cov_filt
 
 
