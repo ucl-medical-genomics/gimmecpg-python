@@ -8,19 +8,22 @@ import polars as pl
 
 def collapse_strands(bed):
     """Collapse strands."""
-    pos = bed.filter(pl.col("strand") == "+")  # add column for start site on complementary strand
-    neg = bed.filter(pl.col("strand") == "-").with_columns((pl.col("start") - 1).alias("start"))
+    pos = bed.filter(pl.col("strand") == "+").with_columns(
+        (pl.col("start") - 1).alias("start")
+    )  # add column for start site on complementary strand
+    neg = bed.filter(pl.col("strand") == "-")
 
-    joint = pos.join(neg, on=["chr", "start"], how="full", coalesce=True).with_columns(
+    joint = pos.join(neg, left_on=["chr", "start"], right_on=["chr", "start"], how="full", coalesce=True).with_columns(
         pl.concat_str([pl.col("strand"), pl.col("strand_right")], separator="/", ignore_nulls=True)
     )
 
     merged = (
         joint.with_columns(
-            pl.when(pl.col("strand") == "-").then(pl.col("start") + 1).otherwise(pl.col("start") + 0).alias("start"),
-            pl.col(["percent_methylated_right", "coverage_right", "percent_methylated", "coverage"])
+            # pl.when(pl.col("strand") != "-").then(pl.col("start") + 1).
+            # otherwise(pl.col("start")).alias("alt_alt_start"),
+            pl.col(["percent_methylated_right", "coverage_right", "percent_methylated", "coverage"])  #
             .fill_null(0)
-            .cast(pl.UInt16),
+            .cast(pl.UInt16)
         )
         .with_columns(
             (
@@ -35,7 +38,6 @@ def collapse_strands(bed):
             (pl.col("coverage") + pl.col("coverage_right")).alias("total_coverage")
         )  # calculated weighted average
     )
-
     return merged
 
 
@@ -74,30 +76,35 @@ def read_files(file, mincov, collapse):
         .with_columns(
             pl.col("chr").str.replace(r"(?i)Chr", "")  # remove "chr" from Chr column to match reference
         )
+        # .filter((pl.col("chr") == "Y") | (pl.col("chr") == "X") | (pl.col("chr").
+        # str.to_integer(strict=False).is_between(1,22))) #,      pl.col("percent_methylated") > 0)
     )
 
     if collapse:
         data = collapse_strands(bed)
+        data = data.with_columns(
+            maxQuant=pl.col("total_coverage").quantile(0.999, "nearest")
+        )  # calculate max coverage quantile
     else:
-        data = bed.with_columns(pl.col("percent_methylated").alias("avg"), pl.col("coverage").alias("total_coverage"))
+        data = bed.with_columns(
+            pl.col("percent_methylated").alias("avg"),
+            pl.col("coverage").alias("total_coverage"),
+            maxQuant=pl.col("total_coverage").quantile(0.999, "nearest"),  # calculate max coverage quantile
+        )
 
-    maxcov = data.select(pl.col("total_coverage").quantile(0.999, "nearest"))
+    quants = data.with_columns(
+        over=pl.col("total_coverage") - pl.col("maxQuant")
+    )  # identify rows that go over 99 quantile
 
-    test = data.with_columns(
-        quant = pl.col("total_coverage").quantile(0.999, "nearest")
-    ).with_columns(
-        over = pl.col("total_coverage") - pl.col("quant"))
-
-    # data_cov_filt = (
-    #     data.filter((pl.col("total_coverage") >= mincov) & (pl.col("total_coverage") < maxcov))
-    #     .select(["chr", "start", "strand", "avg"])
-    #     .with_columns(pl.lit(name).alias("sample"))
-    #     .cast({"chr": pl.Utf8, "start": pl.UInt64, "avg": pl.Float64, "sample": pl.Utf8})
-    # )  # filter by coverage
-
-    print(test.fetch(10))
-    quit(0)
-    return data_cov_filt
+    data_cov_filt = (
+        quants.filter((pl.col("total_coverage") >= mincov) & (pl.col("over") < 0))  #
+        .with_columns(pl.lit(name).alias("sample"))
+        .select(["chr", "start", "strand", "avg", "sample"])
+    )  # filter by coverage
+    # with pl.Config(tbl_cols=-1): #, tbl_rows=1000
+    #     print(data_cov_filt.collect())
+    # quit()
+    return data_cov_filt  # TRY RETURNING UNFILTERED MERGED LAZYFRAME?
 
 
 def save_files(df, outpath):
