@@ -19,8 +19,6 @@ def collapse_strands(bed):
 
     merged = (
         joint.with_columns(
-            # pl.when(pl.col("strand") != "-").then(pl.col("start") + 1).
-            # otherwise(pl.col("start")).alias("alt_alt_start"),
             pl.col(["percent_methylated_right", "coverage_right", "percent_methylated", "coverage"])  #
             .fill_null(0)
             .cast(pl.UInt16)
@@ -76,8 +74,6 @@ def read_files(file, mincov, collapse):
         .with_columns(
             pl.col("chr").str.replace(r"(?i)Chr", "")  # remove "chr" from Chr column to match reference
         )
-        # .filter((pl.col("chr") == "Y") | (pl.col("chr") == "X") | (pl.col("chr").
-        # str.to_integer(strict=False).is_between(1,22))) #,      pl.col("percent_methylated") > 0)
     )
 
     if collapse:
@@ -97,14 +93,12 @@ def read_files(file, mincov, collapse):
     )  # identify rows that go over 99 quantile
 
     data_cov_filt = (
-        quants.filter((pl.col("total_coverage") >= mincov) & (pl.col("over") < 0))  #
+        quants.filter((pl.col("total_coverage") >= mincov) & (pl.col("over") < 0))  # filter by coverage
         .with_columns(pl.lit(name).alias("sample"))
         .select(["chr", "start", "strand", "avg", "sample"])
-    )  # filter by coverage
-    # with pl.Config(tbl_cols=-1): #, tbl_rows=1000
-    #     print(data_cov_filt.collect())
-    # quit()
-    return data_cov_filt  # TRY RETURNING UNFILTERED MERGED LAZYFRAME?
+    )
+
+    return data_cov_filt
 
 
 def save_files(df, outpath):
