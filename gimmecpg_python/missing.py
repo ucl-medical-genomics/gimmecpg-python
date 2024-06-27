@@ -12,8 +12,6 @@ def missing_sites(bed, ref):
     )
 
     missing = ref.join(bed, on=["chr", "start"], how="left")
-    print(missing.filter(pl.col("avg").is_not_null()).collect())
-    quit()
 
     missing_mat = (
         missing.with_columns(
