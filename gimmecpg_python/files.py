@@ -8,34 +8,36 @@ import polars as pl
 
 def collapse_strands(bed):
     """Collapse strands."""
-    pos = bed.filter(pl.col("strand") == "+").with_columns(
-        (pl.col("start") - 1).alias("start")
+    pos = bed.filter(pl.col("strand") == "+")
+    neg = bed.filter(pl.col("strand") == "-").with_columns(
+        (pl.col("start")).alias("cStart")
     )  # add column for start site on complementary strand
-    neg = bed.filter(pl.col("strand") == "-")
 
-    joint = pos.join(neg, left_on=["chr", "start"], right_on=["chr", "start"], how="full", coalesce=True).with_columns(
+    joint = pos.join(neg, left_on=["chr", "end"], right_on=["chr", "cStart"], how="full", coalesce=True).with_columns(
         pl.concat_str([pl.col("strand"), pl.col("strand_right")], separator="/", ignore_nulls=True)
     )
 
     merged = (
         joint.with_columns(
-            pl.col(["percent_methylated_right", "coverage_right", "percent_methylated", "coverage"])  #
+            pl.min_horizontal("start", "start_right").alias("start"),
+            pl.max_horizontal("end", "end_right").alias("end"),
+            pl.col(["percent_methylated_right", "coverage_right", "percent_methylated", "coverage"])
             .fill_null(0)
-            .cast(pl.UInt16)
+            .cast(pl.UInt64),
         )
+        .with_columns((pl.col("coverage") + pl.col("coverage_right")).alias("total_coverage"))
+        .filter(pl.col("total_coverage") > 0)
         .with_columns(
             (
                 (
                     pl.col("coverage") * pl.col("percent_methylated")
                     + pl.col("coverage_right") * pl.col("percent_methylated_right")
                 )
-                / (pl.col("coverage") + pl.col("coverage_right"))
+                / pl.col("total_coverage")
             ).alias("avg")
-        )
-        .with_columns(
-            (pl.col("coverage") + pl.col("coverage_right")).alias("total_coverage")
         )  # calculated weighted average
     )
+
     return merged
 
 
@@ -54,8 +56,8 @@ def read_files(file, mincov, collapse):
                 "column_2": pl.UInt64,
                 "column_3": pl.UInt64,
                 "column_6": pl.Utf8,
-                "column_10": pl.UInt16,
-                "column_11": pl.UInt16,
+                "column_10": pl.UInt64,
+                "column_11": pl.UInt64,
             },
         )  # cannot use scan() on zipped file
         .select(
@@ -72,7 +74,7 @@ def read_files(file, mincov, collapse):
             }
         )  # rename to something that makes more sense
         .with_columns(
-            pl.col("chr").str.replace(r"(?i)Chr", "")  # remove "chr" from Chr column to match reference
+            pl.col("chr").str.replace_all(r"(?i)Chr", "")  # remove "chr" from Chr column to match reference
         )
     )
 
@@ -95,7 +97,8 @@ def read_files(file, mincov, collapse):
     data_cov_filt = (
         quants.filter((pl.col("total_coverage") >= mincov) & (pl.col("over") < 0))  # filter by coverage
         .with_columns(pl.lit(name).alias("sample"))
-        .select(["chr", "start", "strand", "avg", "sample"])
+        .select(["chr", "start", "end", "strand", "avg", "sample"])
+        .cast({"chr": pl.Utf8, "start": pl.UInt64, "avg": pl.Float64, "sample": pl.Utf8})
     )
 
     return data_cov_filt
