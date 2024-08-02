@@ -2,12 +2,12 @@
 
 import argparse
 import glob
-import sys
 import re
+import sys
+from itertools import batched
 
 import polars as pl
-from itertools import batched
-from files import read_files, parallel_save
+from files import parallel_save, read_files
 from impute import fast_impute, h2oTraining
 from missing import missing_sites
 
@@ -53,11 +53,11 @@ parser.add_argument(
                        strands together. Default = True",
 )
 parser.add_argument(
-    "-a",
-    "--accurate",
+    "-x",
+    "--machineLearning",
     action="store_true",
     required=False,
-    help="Choose between Accurate and Fast mode. Default = Fast",
+    help="Choose whether to use machine learning for imputation. Default = no machine learning",
 )
 parser.add_argument(
     "-t",
@@ -97,8 +97,8 @@ bed_files = args.input + "/*.bed"
 bed_paths = glob.glob(bed_files)
 
 if args.pattern:
-    names = args.pattern.split(',')
-    regex = re.compile('|'.join(names))
+    names = args.pattern.split(",")
+    regex = re.compile("|".join(names))
     bed_paths = [path for path in bed_paths if regex.search(path)]
 
 
@@ -129,12 +129,12 @@ if args.maxDistance is not None:
 
 results = []
 
-if not args.accurate:
-    print("Fast imputation mode")
+if not args.machineLearning:
+    print("Default imputation mode")
     imputed_lfs = [fast_impute(lf, args.maxDistance) for lf in missing]  # RESULT
     results = imputed_lfs
 else:
-    print("Accurate mode: prepare for H2O AutoML training")
+    print("machineLearning mode: prepare for H2O AutoML training")
     lead_prediction = [
         h2oTraining(lf, args.runTime, args.maxModels, args.maxDistance, args.streaming) for lf in missing
     ]  # RESULT
@@ -160,7 +160,7 @@ if len(results) <= batch_limit:
     print("Batch mode OFF")
     if args.streaming:
         print("Collecting results in streaming mode")
-        dfs = pl.collect_all(results, streaming = True)
+        dfs = pl.collect_all(results, streaming=True)
         parallel_save(dfs, args.output)
         print("All files Saved")
     else:
@@ -173,7 +173,7 @@ else:
     if args.streaming:
         print("Collecting batches of results in streaming mode")
         for batch in batched(results, batch_limit):
-            dfs = pl.collect_all(batch, streaming = True)
+            dfs = pl.collect_all(batch, streaming=True)
             print("Saving in batches")
             parallel_save(dfs, args.output)
         print("All files Saved")
@@ -184,6 +184,6 @@ else:
             print("Saving in batches")
             parallel_save(dfs, args.output)
         print("All files Saved")
-    
+
 
 print("Imputation complete")
