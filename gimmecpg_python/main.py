@@ -43,7 +43,7 @@ parser.add_argument(
     required=False,
     type=int,
     help="Maximum distance between missing site and each neighbour for the site to be imputed. \
-                       Default = 1000kb",
+                       Default = 1000bp",
 )
 parser.add_argument(
     "-k",
