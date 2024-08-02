@@ -97,7 +97,7 @@ def read_files(file, mincov, collapse):
     data_cov_filt = (
         quants.filter((pl.col("total_coverage") >= mincov) & (pl.col("over") < 0))  # filter by coverage
         .with_columns(pl.lit(name).alias("sample"))
-        .select(["chr", "start", "end", "strand", "avg", "sample"])
+        .select(["chr", "start", "strand", "avg", "sample"])
         .cast({"chr": pl.Utf8, "start": pl.UInt64, "avg": pl.Float64, "sample": pl.Utf8})
     )
 
