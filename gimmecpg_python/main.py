@@ -39,10 +39,11 @@ parser.add_argument(
     "-d",
     "--maxDistance",
     action="store",
+    default=1000,
     required=False,
     type=int,
     help="Maximum distance between missing site and each neighbour for the site to be imputed. \
-                       Default = all sites considered",
+                       Default = 1000kb",
 )
 parser.add_argument(
     "-k",

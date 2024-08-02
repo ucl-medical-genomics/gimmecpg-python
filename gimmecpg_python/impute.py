@@ -8,7 +8,7 @@ from h2o.automl import H2OAutoML
 def fast_impute(lf, dist):
     """Fast imputation."""
     if dist is not None:
-        lf = lf.filter((pl.col("f_dist") < dist) & (pl.col("b_dist") < dist))
+        lf = lf.filter((pl.col("f_dist") <= dist) & (pl.col("b_dist") <= dist))
 
     imputed = lf.with_columns(
         pl.col("avg").fill_null(
@@ -41,8 +41,8 @@ def h2oPrep(lf, dist, streaming):
     to_predict_lf = lf.filter(pl.col("avg").is_null()).drop(["end_right", "b_start", "f_start"])
 
     if dist is not None:
-        to_predict_lf = to_predict_lf.filter((pl.col("f_dist") < dist) & (pl.col("b_dist") < dist))
-        known_lf = known_lf.filter((pl.col("f_dist") < dist) & (pl.col("b_dist") < dist))
+        to_predict_lf = to_predict_lf.filter((pl.col("f_dist") <= dist) & (pl.col("b_dist") <= dist))
+        known_lf = known_lf.filter((pl.col("f_dist") <= dist) & (pl.col("b_dist") <= dist))
 
     if streaming:
         known = known_lf.collect(streaming=True)
@@ -87,7 +87,7 @@ def h2oTraining(lf, maxTime, maxModels, dist, streaming):
     imputed_lf = pl.concat([to_predict_lf, prediction_lf], how="horizontal")
 
     if dist is not None:
-        lf = lf.filter((pl.col("f_dist") < dist) & (pl.col("b_dist") < dist))
+        lf = lf.filter((pl.col("f_dist") <= dist) & (pl.col("b_dist") <= dist))
 
     res = (
         lf.join(imputed_lf, on=["chr", "start", "end"], how="full", coalesce=True)
