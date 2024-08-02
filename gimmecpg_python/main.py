@@ -126,7 +126,7 @@ print("Identified missing sites")
 ################################
 
 if args.maxDistance is not None:
-    print(f"Imputing methylation for missing sites less than {args.maxDistance} bases from each neighbour")
+    print(f"Imputing methylation for missing sites within {args.maxDistance} bases from each neighbour")
 
 results = []
 
