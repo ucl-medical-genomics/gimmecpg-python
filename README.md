@@ -1,9 +1,10 @@
 # GIMMEcpg-python
 
-[![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg?style=plastic)](https://github.com/niuums/gimmecpg-python/graphs/commit-activity)
-[![GitHub](https://img.shields.io/github/license/niuums/gimmecpg-python?style=plastic)](https://github.com/niuums/gimmecpg-python)
-[![GitHub release (latest by date)](https://img.shields.io/github/v/release/niuums/gimmecpg-python?display_name=tag&logo=github&style=plastic)](https://github.com/niuums/gimmecpg-python)
-[![GitHub Release](https://img.shields.io/github/release-date/niuums/gimmecpg-python?style=plastic&logo=github)](https://github.com/niuums/gimmecpg-python)
+
+[![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg?style=plastic)](https://github.com/ucl-medical-genomics/gimmecpg.py/graphs/commit-activity)
+[![GitHub](https://img.shields.io/github/license/ucl-medical-genomics/gimmecpg.py?style=plastic)](https://github.com/ucl-medical-genomics/gimmecpg.py)
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/ucl-medical-genomics/gimmecpg.py?display_name=tag&logo=github&style=plastic)](https://github.com/ucl-medical-genomics/gimmecpg.py)
+[![GitHub Release](https://img.shields.io/github/release-date/ucl-medical-genomics/gimmecpg.py?style=plastic&logo=github)](https://github.com/ucl-medical-genomics/gimmecpg.py)
 [![Poetry](https://img.shields.io/endpoint?style=plastic&url=https://python-poetry.org/badge/v0.json)](https://python-poetry.org/)
 [![Ruff](https://img.shields.io/endpoint?style=plastic&url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white&style=plastic)](https://github.com/pre-commit/pre-commit)
