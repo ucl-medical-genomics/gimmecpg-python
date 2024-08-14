@@ -25,7 +25,10 @@ def collapse_strands(bed):
             .fill_null(0)
             .cast(pl.UInt64),
         )
-        .with_columns((pl.col("coverage") + pl.col("coverage_right")).alias("total_coverage"))
+        .with_columns(
+            (pl.col("coverage") + pl.col("coverage_right")).alias("total_coverage"),
+            pl.when(pl.col("strand") == "-").then(pl.col("start") - 1).otherwise(pl.col("start")).alias("start"),
+        )
         .filter(pl.col("total_coverage") > 0)
         .with_columns(
             (
