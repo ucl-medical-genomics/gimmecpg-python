@@ -110,6 +110,7 @@ if not bed_paths:
 
 
 print(f"Merge methylation sites on opposite strands = {args.collapse}")
+print(f"Coverage cutoff at {args.minCov}")
 
 lf_list = [read_files(bed, args.minCov, args.collapse) for bed in bed_paths]
 
