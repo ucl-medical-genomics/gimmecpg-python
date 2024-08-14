@@ -82,7 +82,11 @@ def h2oTraining(lf, maxTime, maxModels, dist, streaming):
     lb = aml.leaderboard
 
     prediction = aml.leader.predict(testingFrame)
-    prediction_lf = pl.LazyFrame(prediction.as_data_frame())
+
+    with h2o.utils.threading.local_context(polars_enabled=True, datatable_enabled=True):
+        prediction_df = prediction.as_data_frame()
+
+    prediction_lf = pl.LazyFrame(prediction_df)
 
     imputed_lf = pl.concat([to_predict_lf, prediction_lf], how="horizontal")
 
