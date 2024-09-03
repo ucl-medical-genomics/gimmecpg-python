@@ -24,6 +24,7 @@ parser.add_argument(
     help="Path to directory of bed files",
 )
 parser.add_argument("-p", "--pattern", action="store", required=False, help="Pattern to select specific files")
+parser.add_argument("-e", "--exclude", action="store", required=False, help="Path to a list of CpG sites to exclude")
 parser.add_argument("-o", "--output", action="store", required=True, help="Path to output directory")
 parser.add_argument("-r", "--ref", action="store", required=True, help="Path to reference methylation file")
 parser.add_argument(
@@ -73,7 +74,7 @@ parser.add_argument(
     "-m",
     "--maxModels",
     action="store",
-    default=5,
+    # default=5,
     required=False,
     type=int,
     help="Maximum number of models to train within the time specified \
@@ -112,7 +113,7 @@ if not bed_paths:
 print(f"Merge methylation sites on opposite strands = {args.collapse}")
 print(f"Coverage cutoff at {args.minCov}")
 
-lf_list = [read_files(bed, args.minCov, args.collapse) for bed in bed_paths]
+lf_list = [read_files(bed, args.minCov, args.collapse, args.exclude) for bed in bed_paths]
 
 
 ##########################
@@ -126,7 +127,7 @@ print("Identified missing sites")
 # Imputation (default is fast) #
 ################################
 
-if args.maxDistance is not None:
+if args.maxDistance > 0:
     print(f"Imputing methylation for missing sites within {args.maxDistance} bases from each neighbour")
 
 results = []
