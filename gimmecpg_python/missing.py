@@ -7,8 +7,8 @@ def missing_sites(bed, ref, blacklist):
     """Compare to reference."""
     blacklist = (
         pl.scan_parquet(blacklist, parallel="row_groups")
-        .cast({"chr": pl.Utf8, "start": pl.UInt64, "end": pl.UInt64})
-        .select(["chr", "start", "end"])
+        .cast({"chr": pl.Utf8, "start": pl.UInt64})
+        .select(["chr", "start"])
     )
 
     ref = (
