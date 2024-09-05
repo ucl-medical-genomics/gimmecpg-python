@@ -44,11 +44,11 @@ def collapse_strands(bed):
     return merged
 
 
-def read_files(file, mincov, collapse, blacklist):
+def read_files(file, mincov, collapse):
     """Scan files."""
     name = Path(file).stem
     print(f"Scanning {name}")
-    bed_raw = (
+    bed = (
         pl.scan_csv(
             file,
             separator="\t",
@@ -80,14 +80,6 @@ def read_files(file, mincov, collapse, blacklist):
             pl.col("chr").str.replace_all(r"(?i)Chr", "")  # remove "chr" from Chr column to match reference
         )
     )
-
-    blacklist = (
-        pl.scan_parquet(blacklist, parallel="row_groups")
-        .cast({"chr": pl.Utf8, "start": pl.UInt64, "end": pl.UInt64})
-        .select(["chr", "start", "end"])
-    )
-
-    bed = bed_raw.filter(~pl.col("chr").is_in(["Y", "X"])).join(blacklist, how = "anti", on=["chr", "start"]) # remove chrXY, and CpG sites in ENCODE blacklist
 
     if collapse:
         data = collapse_strands(bed)

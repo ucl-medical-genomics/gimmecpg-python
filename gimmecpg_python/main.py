@@ -113,14 +113,14 @@ if not bed_paths:
 print(f"Merge methylation sites on opposite strands = {args.collapse}")
 print(f"Coverage cutoff at {args.minCov}")
 
-lf_list = [read_files(bed, args.minCov, args.collapse, args.exclude) for bed in bed_paths]
+lf_list = [read_files(bed, args.minCov, args.collapse) for bed in bed_paths]
 
 
 ##########################
 # Identify missing sites #
 ##########################
 
-missing = [missing_sites(lf, args.ref) for lf in lf_list]
+missing = [missing_sites(lf, args.ref, args.exclude) for lf in lf_list]
 print("Identified missing sites")
 
 ################################
