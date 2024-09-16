@@ -23,113 +23,117 @@ def fast_impute(lf, dist):
     return imputed
 
 
+def distBins(lf, col):
+    """Bin neighbouring distances."""
+    corrMat = (
+        lf.with_columns(
+            pl.when(pl.col(col) <= 200)
+                .then(pl.col(col))
+            .alias("dist_bins")
+        )
+        .with_columns(
+            pl.when(pl.col(col) > 200)  
+                .then((((pl.col(col)-1)//10) + 1) * 10)
+            .otherwise(pl.col("dist_bins"))
+            .alias("dist_bins")
+        )
+        .with_columns(
+            pl.when(pl.col(col) > 500)  
+                .then((((pl.col(col)-1)//100) + 1) * 100)
+                .otherwise(pl.col("dist_bins"))
+            .alias("dist_bins")
+        )
+        .with_columns(
+            pl.when(pl.col(col) > 2000)  
+                .then(-1)
+                .otherwise(pl.col("dist_bins"))
+            .alias("dist_bins")
+        )
+    )
+    
+    return corrMat
+
+
 def h2oPrep(lf, dist, streaming):
     """Prepare training and testing frames."""
-    
+
     known_sites = (
         lf.filter(pl.col("avg").is_not_null())
         .select(["chr", "start", "end", "avg"])
-    )
-
-    features_lf = (
-        known_sites.with_columns(
+        .with_columns(
             pl.col("start").shift(-1).over("chr").alias("f_start"),
             pl.col("start").shift().over("chr").alias("b_start"),
             pl.col("avg").shift(-1).over("chr").alias("f_meth"),
             pl.col("avg").shift().over("chr").alias("b_meth")
         )
-        .drop_nulls()
         .with_columns(
             (pl.col("start") - pl.col("b_start")).alias("b_dist"), (pl.col("f_start") - pl.col("start")).alias("f_dist")
-        )
+        )        
         .with_columns(
-            pl.sum_horizontal("f_dist", "b_dist").alias("t_dist")
-        )
-        .with_columns(
-            ((pl.col("b_meth") * pl.col("f_dist") + pl.col("f_meth") * pl.col("b_dist")) / pl.col("t_dist")).alias("fast_res"),
-            pl.col("t_dist").quantile(0.999, "nearest").alias("limit")
-
-        )
-        .filter(pl.col("t_dist") < pl.col("limit"))
-        .select(["avg", "b_meth", "f_meth", "b_dist", "f_dist", "fast_res"])
-    )
-
-    # with pl.Config(tbl_cols = -1):
-    #     print(features_lf.fetch(10000))
-    # exit()
-    
-    # features = ( known_lf.with_columns(
-    #         pl.col("start").shift(-1).over("chr").alias("f_start"),
-    #         pl.col("start").shift().over("chr").alias("b_start"),
-    #         pl.col("avg").shift(-1).over("chr").alias("f_meth"),
-    #         pl.col("avg").shift().over("chr").alias("b_meth")
-    #     )
-    #     .drop_nulls()
-    #     .with_columns(
-    #         (pl.col("start") - pl.col("b_start")).alias("b_dist"), (pl.col("f_start") - pl.col("start")).alias("f_dist")
-    #     )
-    #     .with_columns(
-    #         t_dist = pl.sum_horizontal("f_dist", "b_dist")
-    #     )
-    #     # .with_columns(
-    #     #     avgMeth = (pl.col("b_meth") + pl.col("f_meth"))/2
-    #     # )
-    #     .with_columns(
-    #         ((pl.col("b_meth") * pl.col("f_dist") + pl.col("f_meth") * pl.col("b_dist")) / pl.sum_horizontal("f_dist", "b_dist")).alias("fast_res"),
-    #         # (pl.col("b_meth") * pl.col("f_dist")).log1p().alias("bMeth_fDist"),
-    #         # (pl.col("f_meth") * pl.col("b_dist")).log1p().alias("fMeth_bDist"),
-    #         # (pl.col("b_dist") + pl.col("f_dist")).alias("total_distance"),
-    #         # (pl.col("avgMeth").mode()).alias("modeVal"),
-    #         # (pl.col("b_meth").log1p()).alias("lg_b_meth"),
-    #         # (pl.col("f_meth").log1p()).alias("lg_f_meth"),
-    #         # (pl.col("b_dist").log1p()).alias("lg_b_dist"),
-    #         # (pl.col("f_dist").log1p()).alias("lg_f_dist"),
-    #         # (pl.col("b_meth") + pl.col("f_meth")).alias("total_meth"),
-    #         pl.col("avg").qcut(5, labels=["a", "b", "c", "d", "e"]).alias("bins"), # ??
-    #         limit = pl.col("t_dist").quantile(0.999, "nearest")
-    #         # weights = (1/((pl.col("b_dist") + pl.col("f_dist")).log(base=10)))
-    #     )
-    #     .filter(pl.col("t_dist") < pl.col("limit"))
-    #     .with_columns(
-    #         (pl.int_range(pl.count("bins"), eager=False).over("bins") % 5).alias("folds")
-    #     )
-    #     .select(["avg", "b_meth", "f_meth", "b_dist", "f_dist", "folds", "fast_res"])
-    # )
-    
-    to_predict_lf = lf.filter(pl.col("avg").is_null()).with_columns(
             ((pl.col("b_meth") * pl.col("f_dist") + pl.col("f_meth") * pl.col("b_dist")) / pl.sum_horizontal("f_dist", "b_dist")).alias("fast_res")
         )
+        .with_columns(
+            (pl.col("fast_res") - pl.col("avg")).abs().alias("error")
+        )
+        .with_columns(
+            (pl.col("error").quantile(0.99, "nearest")).alias("limit") # 0.99 is the sweet spot?
+        )
+        .filter(pl.col("error") < pl.col("limit"))
+    )
 
-    # to_predict_lf = lf.filter(pl.col("avg").is_null()).with_columns(
-    #         # ((pl.col("b_meth") * pl.col("f_dist") + pl.col("f_meth") * pl.col("b_dist")) / pl.sum_horizontal("f_dist", "b_dist")).alias("fast_res"),
-    #         # (pl.col("b_meth") * pl.col("f_dist")).log1p().alias("bMeth_fDist"),
-    #         # (pl.col("f_meth") * pl.col("b_dist")).log1p().alias("fMeth_bDist"),
-    #         # (pl.col("b_meth").log1p()).alias("lg_b_meth"),
-    #         # (pl.col("f_meth").log1p()).alias("lg_f_meth"),
-    #         # (pl.col("b_dist").log1p()).alias("lg_b_dist"),
-    #         # (pl.col("f_dist").log1p()).alias("lg_f_dist"),
-    #         # pl.col("avg").cast(pl.UInt32),
-    #         # pl.col("b_meth").cast(pl.UInt32),
-    #         # pl.col("f_meth").cast(pl.UInt32),
-    #         # pl.col("b_dist").cast(pl.UInt32),
-    #         # pl.col("f_dist").cast(pl.UInt32),
-    #         # weights = (1/((pl.col("b_dist") + pl.col("f_dist")).log(base=10)))
-    #         # (pl.col("b_dist") + pl.col("f_dist")).alias("total_distance")
-    #         # ((pl.col("b_dist") + pl.col("f_dist"))/2).alias("total_distance")
-    #     ).drop(["end_right", "b_start", "f_start"])
 
-    # if dist > 0:
-    #     to_predict_lf = to_predict_lf.filter((pl.col("f_dist") <= dist) & (pl.col("b_dist") <= dist))
-    # with pl.Config(tbl_cols = -1):
-    #     print(to_predict_lf.select(["avg", "b_meth", "f_meth", "b_dist", "f_dist"]).fetch(1000))
-    # exit()
+    if dist > 0:
+        known_sites = known_sites.filter((pl.col("f_dist") <= dist), (pl.col("b_dist") <= dist))
+
+
+    known_sites = distBins(known_sites, "f_dist").rename({"dist_bins": "f_dist_bins"})
+    known_sites = distBins(known_sites, "b_dist").rename({"dist_bins": "b_dist_bins"})
+
+    corr = (known_sites.select(["avg", "f_meth", "f_dist", "f_dist_bins"])
+            .group_by("f_dist_bins").agg(pl.corr("f_meth","avg", method = "pearson").alias("corr"))
+            .with_columns(
+                pl.when(pl.col("f_dist_bins") == -1).then(0).otherwise(pl.col("corr")).alias("corr")
+            )
+    ).drop_nulls()
+
+
+    features_lf = (
+        known_sites
+        .join(corr, right_on = "f_dist_bins", left_on = "b_dist_bins", how = "left").rename({"corr": "b_corr"})
+        .join(corr, on = "f_dist_bins", how = "left").rename({"corr": "f_corr"})
+        .select(["avg", "b_meth", "f_meth", "b_dist", "f_dist", "b_corr", "f_corr"])
+        .with_columns(
+            (pl.col("b_meth").log1p()).alias("lg_b_meth"),
+            (pl.col("f_meth").log1p()).alias("lg_f_meth"),
+            (pl.col("b_dist").log1p()).alias("lg_b_dist"),
+            (pl.col("f_dist").log1p()).alias("lg_f_dist")
+        )
+    )
+    
+    missing_sites = lf.filter(pl.col("avg").is_null())
+
+    missing_sites = distBins(missing_sites, "f_dist").rename({"dist_bins": "f_dist_bins"})
+    missing_sites = distBins(missing_sites, "b_dist").rename({"dist_bins": "b_dist_bins"})
+
+    to_predict_lf = (
+        missing_sites
+        .join(corr, right_on = "f_dist_bins", left_on = "b_dist_bins", how = "left").rename({"corr": "b_corr"})
+        .join(corr, on = "f_dist_bins", how = "left").rename({"corr": "f_corr"})
+        .with_columns(
+            ((pl.col("b_meth") * pl.col("f_dist") + pl.col("f_meth") * pl.col("b_dist")) / pl.sum_horizontal("f_dist", "b_dist")).alias("fast_res"),
+            (pl.col("b_meth").log1p()).alias("lg_b_meth"),
+            (pl.col("f_meth").log1p()).alias("lg_f_meth"),
+            (pl.col("b_dist").log1p()).alias("lg_b_dist"),
+            (pl.col("f_dist").log1p()).alias("lg_f_dist")
+        )
+    )
 
     if streaming:
         features = features_lf.collect(streaming=True)
-        to_predict = to_predict_lf.select(["avg", "b_meth", "f_meth", "b_dist", "f_dist", "fast_res"]).collect(streaming=True)
+        to_predict = to_predict_lf.select(["avg", "lg_b_dist", "lg_f_dist", "lg_b_meth", "lg_f_meth", "b_corr", "f_corr"]).collect(streaming=True)
     else:
         features = features_lf.collect()
-        to_predict = to_predict_lf.select(["avg", "b_meth", "f_meth", "b_dist", "f_dist", "fast_res"]).collect()
+        to_predict = to_predict_lf.select(["avg", "lg_b_dist", "lg_f_dist", "lg_b_meth", "lg_f_meth", "b_corr", "f_corr"]).collect()
 
     return features, to_predict, to_predict_lf
 
@@ -145,20 +149,20 @@ def h2oTraining(lf, maxTime, maxModels, dist, streaming):
     trainingFrame = h2o.H2OFrame(
         training.to_pandas(use_pyarrow_extension_array=True)
     )  # make sure it's the right format
-    trainingFrame[["avg", "b_meth", "f_meth", "b_dist", "f_dist", "fast_res"]] = trainingFrame[
-        ["avg", "b_meth", "f_meth", "b_dist", "f_dist", "fast_res"] #, "total_distance", "weights" , "lg_b_dist", "lg_f_dist" , "b_dist", "f_dist", "weights"
+    trainingFrame[["avg", "lg_b_dist", "lg_f_dist", "lg_b_meth", "lg_f_meth", "b_corr", "f_corr"]] = trainingFrame[
+        ["avg", "lg_b_dist", "lg_f_dist", "lg_b_meth", "lg_f_meth", "b_corr", "f_corr"] 
     ].asnumeric()
 
     testingFrame = h2o.H2OFrame(test.to_pandas(use_pyarrow_extension_array=True))  # make sure it's the right format
-    testingFrame[["avg", "b_meth", "f_meth", "b_dist", "f_dist", "fast_res"]] = testingFrame[
-        ["avg", "b_meth", "f_meth", "b_dist", "f_dist", "fast_res"] # , "total_distance", "weights" , "lg_b_dist", "lg_f_dist"
+    testingFrame[["avg", "lg_b_dist", "lg_f_dist", "lg_b_meth", "lg_f_meth", "b_corr", "f_corr"]] = testingFrame[
+        ["avg", "lg_b_dist", "lg_f_dist", "lg_b_meth", "lg_f_meth", "b_corr", "f_corr"] 
     ].asnumeric()
 
     y = "avg"  # specify the response columns
-    x = ["b_meth", "f_meth", "b_dist", "f_dist", "fast_res"]  # specify the predictors , "weights" , "total_distance", , "lg_b_dist", "lg_f_dist" , "fast_res"
+    x = ["lg_b_dist", "lg_f_dist", "lg_b_meth", "lg_f_meth", "b_corr", "f_corr"]  # specify the predictors 
 
-    aml = H2OAutoML(max_runtime_secs=maxTime, seed=1, max_models=maxModels) # , stopping_metric = "MAE", sort_metric = "MAE" , distribution = "poisson" 
-    aml.train(y=y, x=x, training_frame=trainingFrame)  # training_frame = train, leaderboard_frame = testingFrame, , weights_column = "weights" , fold_column="folds"
+    aml = H2OAutoML(max_runtime_secs=maxTime, seed=1, max_models=maxModels, nfolds = 5, stopping_rounds = 3, sort_metric = "deviance") 
+    aml.train(y=y, x=x, training_frame=trainingFrame)  
     lb = aml.leaderboard
 
     prediction = aml.leader.predict(testingFrame)
@@ -170,11 +174,8 @@ def h2oTraining(lf, maxTime, maxModels, dist, streaming):
 
     imputed_lf = pl.concat([to_predict_lf, prediction_lf], how="horizontal")
 
-    # if dist is not None:
-    #     lf = lf.filter((pl.col("f_dist") <= dist) & (pl.col("b_dist") <= dist))
-
     res = (
-        lf.join(imputed_lf, on=["chr", "start", "end"], how="full", coalesce=True)
+        lf.join(imputed_lf, on=["chr", "start"], how="full", coalesce=True)
         .with_columns(pl.col("avg").fill_null(pl.col("predict")), pl.col("sample").fill_null(pl.lit("imputed")))
         .with_columns(
             avg=pl.col("avg").clip(0, 100)
@@ -186,10 +187,6 @@ def h2oTraining(lf, maxTime, maxModels, dist, streaming):
 
     res = res.select(["chr", "start", "end", "strand", "sample", "avg"])
     
-    # with pl.Config(tbl_cols = -1):
-    #     print(res.fetch(1000))
-    # exit()
-
     print(lb.head(rows=lb.nrows))
 
     h2o.remove_all()
