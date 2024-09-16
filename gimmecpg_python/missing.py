@@ -5,17 +5,29 @@ import polars as pl
 
 def missing_sites(bed, ref, blacklist):
     """Compare to reference."""
-    blacklist = (
-        pl.scan_parquet(blacklist, parallel="row_groups")
-        .cast({"chr": pl.Utf8, "start": pl.UInt64})
-        .select(["chr", "start"])
-    )
 
-    ref = (
-        pl.scan_parquet(ref, parallel="row_groups")
-        .cast({"chr": pl.Utf8, "start": pl.UInt64, "end": pl.UInt64})
-        .select(["chr", "start", "end"])
-    ).filter(~pl.col("chr").is_in(["Y", "X"])).join(blacklist, how = "anti", on=["chr", "start"])
+    if blacklist: 
+            
+        blacklist = (
+            pl.scan_parquet(blacklist, parallel="row_groups")
+            .cast({"chr": pl.Utf8, "start": pl.UInt64})
+            .select(["chr", "start"])
+        )
+
+        ref = (
+            pl.scan_parquet(ref, parallel="row_groups")
+            .cast({"chr": pl.Utf8, "start": pl.UInt64, "end": pl.UInt64})
+            .select(["chr", "start", "end"])
+        ).filter(~pl.col("chr").is_in(["Y", "X"])).join(blacklist, how = "anti", on=["chr", "start"])
+    
+    else:
+
+        ref = (
+            pl.scan_parquet(ref, parallel="row_groups")
+            .cast({"chr": pl.Utf8, "start": pl.UInt64, "end": pl.UInt64})
+            .select(["chr", "start", "end"])
+        ).filter(~pl.col("chr").is_in(["Y", "X"]))
+
 
     missing = ref.join(bed, on=["chr", "start"], how="left")
 

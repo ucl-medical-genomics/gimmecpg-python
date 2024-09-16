@@ -120,7 +120,13 @@ lf_list = [read_files(bed, args.minCov, args.collapse) for bed in bed_paths]
 # Identify missing sites #
 ##########################
 
+if args.exclude: 
+    print("Blacklisted regions will be excluded")
+else:
+    print("No blacklisted regions provided; all autosomal CG sites considered")
+
 missing = [missing_sites(lf, args.ref, args.exclude) for lf in lf_list]
+
 print("Identified missing sites")
 
 ################################
