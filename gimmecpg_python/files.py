@@ -20,16 +20,15 @@ def collapse_strands(bed):
     merged = (
         joint.with_columns(
             pl.min_horizontal("start", "start_right").alias("start"),
-            pl.max_horizontal("end", "end_right").alias("end"),
             pl.col(["percent_methylated_right", "coverage_right", "percent_methylated", "coverage"])
             .fill_null(0)
-            .cast(pl.UInt64),
+            .cast(pl.UInt64)
         )
         .with_columns(
             (pl.col("coverage") + pl.col("coverage_right")).alias("total_coverage"),
-            pl.when(pl.col("strand") == "-").then(pl.col("start") - 1).otherwise(pl.col("start")).alias("start"),
+            pl.when(pl.col("strand") == "-").then(pl.col("start") - 1).otherwise(pl.col("start")).alias("start")
         )
-        .filter(pl.col("total_coverage") > 0)
+        .filter(pl.col("total_coverage") > 0) # remove sites with no coverage
         .with_columns(
             (
                 (
