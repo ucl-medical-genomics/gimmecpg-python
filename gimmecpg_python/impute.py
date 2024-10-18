@@ -15,7 +15,7 @@ def fast_impute(lf, dist):
             (pl.col("b_meth") * pl.col("f_dist") + pl.col("f_meth") * pl.col("b_dist"))
             / pl.sum_horizontal("f_dist", "b_dist")
         ),
-        pl.col("sample").fill_null(pl.lit("imputed")),
+        pl.col("sample").fill_null(pl.lit("imputed"))
     )
 
     imputed = imputed.select(["chr", "start", "end", "strand", "sample", "avg"])
@@ -34,7 +34,7 @@ def distBins(lf, col):
         .with_columns(
             pl.when(pl.col(col) > 200)  
                 .then((((pl.col(col)-1)//10) + 1) * 10)
-            .otherwise(pl.col("dist_bins"))
+                .otherwise(pl.col("dist_bins"))
             .alias("dist_bins")
         )
         .with_columns(
@@ -120,7 +120,6 @@ def h2oPrep(lf, dist, streaming):
         .join(corr, right_on = "f_dist_bins", left_on = "b_dist_bins", how = "left").rename({"corr": "b_corr"})
         .join(corr, on = "f_dist_bins", how = "left").rename({"corr": "f_corr"})
         .with_columns(
-            ((pl.col("b_meth") * pl.col("f_dist") + pl.col("f_meth") * pl.col("b_dist")) / pl.sum_horizontal("f_dist", "b_dist")).alias("fast_res"),
             (pl.col("b_meth").log1p()).alias("lg_b_meth"),
             (pl.col("f_meth").log1p()).alias("lg_f_meth"),
             (pl.col("b_dist").log1p()).alias("lg_b_dist"),
