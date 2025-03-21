@@ -23,7 +23,7 @@ parser.add_argument(
     required=True,
     help="Path to directory of bed files",
 )
-parser.add_argument("-p", "--pattern", action="store", required=False, help="Pattern to select specific files")
+parser.add_argument("-n", "--name", action="store", required=False, help="Name of specific files. Multiple filenames can be separated with a comma")
 parser.add_argument("-e", "--exclude", action="store", required=False, help="Path to a list of CpG sites to exclude")
 parser.add_argument("-o", "--output", action="store", required=True, help="Path to output directory")
 parser.add_argument("-r", "--ref", action="store", required=True, help="Path to reference methylation file")
@@ -74,7 +74,7 @@ parser.add_argument(
     "-m",
     "--maxModels",
     action="store",
-    # default=5,
+    default=20,
     required=False,
     type=int,
     help="Maximum number of models to train within the time specified \
@@ -113,7 +113,7 @@ if not bed_paths:
 print(f"Merge methylation sites on opposite strands = {args.collapse}")
 print(f"Coverage cutoff at {args.minCov}")
 
-lf_list = [read_files(bed, args.minCov, args.collapse) for bed in bed_paths]
+lf_list = [read_files(bed, args.collapse) for bed in bed_paths]
 
 
 ##########################
@@ -125,7 +125,7 @@ if args.exclude:
 else:
     print("No blacklisted regions provided; all autosomal CG sites considered")
 
-missing = [missing_sites(lf, args.ref, args.exclude) for lf in lf_list]
+missing = [missing_sites(lf, args.ref, args.exclude, args.minCov) for lf in lf_list]
 
 print("Identified missing sites")
 
@@ -149,19 +149,6 @@ else:
     ]  # RESULT
     results = lead_prediction
 
-
-# if args.streaming:
-#         print("Collecting fast imputation results in streaming mode")
-#         dfs = pl.collect_all(results, streaming = True)
-#         for sample in dfs:
-#             save_files_streaming(sample, args.output)
-#         print("Files Saved")
-# else:
-#         print("Collecting fast imputation results")
-#         dfs = pl.collect_all(results)
-#         for sample in dfs:
-#             save_files_normal(sample, args.output)
-#         print("Files Saved")
 
 batch_limit = 10
 

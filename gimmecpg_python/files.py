@@ -20,7 +20,7 @@ def collapse_strands(bed):
     merged = (
         joint.with_columns(
             pl.min_horizontal("start", "start_right").alias("start"),
-            pl.col(["percent_methylated_right", "coverage_right", "percent_methylated", "coverage"])
+            pl.col(["coverage_right", "coverage"])
             .fill_null(0)
             .cast(pl.UInt64)
         )
@@ -43,7 +43,7 @@ def collapse_strands(bed):
     return merged
 
 
-def read_files(file, mincov, collapse):
+def read_files(file, collapse):
     """Scan files."""
     name = Path(file).stem
     print(f"Scanning {name}")
@@ -82,25 +82,23 @@ def read_files(file, mincov, collapse):
 
     if collapse:
         data = collapse_strands(bed)
-        data = data.with_columns(
-            maxQuant=pl.col("total_coverage").quantile(0.999, "nearest")
-        )  # calculate max coverage quantile
     else:
         data = bed.with_columns(
             pl.col("percent_methylated").alias("avg"),
-            pl.col("coverage").alias("total_coverage"),
-            maxQuant=pl.col("total_coverage").quantile(0.999, "nearest"),  # calculate max coverage quantile
+            pl.col("coverage").alias("total_coverage")
         )
 
-    quants = data.with_columns(
-        over=pl.col("total_coverage") - pl.col("maxQuant")
-    )  # identify rows that go over 99 quantile
 
     data_cov_filt = (
-        quants.filter((pl.col("total_coverage") >= mincov) & (pl.col("over") < 0))  # filter by coverage
+        data.with_columns(
+            maxQuant=pl.col("total_coverage").quantile(0.999, "nearest")
+        )  # calculate max coverage quantile
+        .with_columns(
+            over=pl.col("total_coverage") - pl.col("maxQuant")
+        )  # identify rows that go over 99 quantile
         .with_columns(pl.lit(name).alias("sample"))
-        .select(["chr", "start", "strand", "avg", "sample"])
-        .cast({"chr": pl.Utf8, "start": pl.UInt64, "avg": pl.Float64, "sample": pl.Utf8})
+        .select(["chr", "start", "strand", "avg", "sample", "total_coverage", "over"])
+        .cast({"chr" : pl.Utf8, "start" : pl.UInt64, "strand" : pl.Utf8, "avg" : pl.Float64, "sample" : pl.Utf8, "total_coverage" : pl.UInt64})
     )
 
     return data_cov_filt

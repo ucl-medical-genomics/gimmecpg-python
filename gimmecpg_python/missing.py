@@ -3,7 +3,7 @@
 import polars as pl
 
 
-def missing_sites(bed, ref, blacklist):
+def align_to_reference(bed, ref, blacklist):
     """Compare to reference."""
 
     if blacklist: 
@@ -29,10 +29,18 @@ def missing_sites(bed, ref, blacklist):
         ).filter(~pl.col("chr").is_in(["Y", "X"]))
 
 
-    missing = ref.join(bed, on=["chr", "start"], how="left")
+    aligned = ref.join(bed, on=["chr", "start"], how="left")
 
-    missing_mat = (
-        missing.with_columns(
+    return(aligned)
+
+
+def missing_sites(bed, ref, blacklist, mincov):
+    """Define missing sites for imputation."""
+
+    aligned = align_to_reference(bed, ref, blacklist)
+
+    neighbours_added = (
+        aligned.with_columns(
             pl.when(pl.col("avg").is_not_null()).then(pl.col("start")).alias("b_start"),
             pl.when(pl.col("avg").is_not_null()).then(pl.col("start")).alias("f_start"),
             pl.when(pl.col("avg").is_not_null()).then(pl.col("avg")).alias("b_meth"),
@@ -43,8 +51,16 @@ def missing_sites(bed, ref, blacklist):
             pl.col(["b_start", "b_meth"]).forward_fill().over("chr"),
         )
         .with_columns(
-            (pl.col("start") - pl.col("b_start")).alias("b_dist"), (pl.col("f_start") - pl.col("start")).alias("f_dist")
+            (pl.col("start") - pl.col("b_start")).alias("b_dist"), 
+            (pl.col("f_start") - pl.col("start")).alias("f_dist")
         )
     )
 
-    return missing_mat
+
+    missing_sites_defined = neighbours_added.with_columns(
+        methylation = pl.col("avg"),
+        avg = pl.when(pl.col("total_coverage") < mincov).then(None).when(pl.col("over") >= 0).then(None).otherwise("avg")
+        # "avg" is the column where we check if imputation needed or not; "methylation" column is final methylation value
+    )
+
+    return missing_sites_defined
