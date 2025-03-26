@@ -125,7 +125,7 @@ if args.exclude:
 else:
     print("No blacklisted regions provided; all autosomal CG sites considered")
 
-missing = [missing_sites(lf, args.ref, args.exclude, args.minCov) for lf in lf_list]
+missing = [missing_sites(lf, args.ref, args.exclude, args.minCov, args.machineLearning) for lf in lf_list]
 
 print("Identified missing sites")
 
